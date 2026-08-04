@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora Better Asset Manager</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="app-shell">
+        <!-- ░░ TOP BAR ░░ -->
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark"><i data-lucide="disc-3"></i></div>
+                <div class="brand-text">
+                    <span class="brand-name">Aurora</span>
+                    <span class="brand-sub">Better Asset Manager</span>
+                </div>
+                <span class="demo-badge" id="demoModeBadge" hidden><i data-lucide="flask-conical"></i> Demo</span>
+            </div>
+
+            <div class="topbar-center">
+                <div class="active-game" id="activeGamePill">
+                    <div class="active-game-icon"><i data-lucide="gamepad-2"></i></div>
+                    <div class="active-game-body">
+                        <span class="active-game-title" id="headerTitleName">No Game Selected</span>
+                    </div>
+                    <button class="icon-btn" id="btnEditGameInfo" title="Edit game details">
+                        <i data-lucide="pencil"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="topbar-actions">
+                <button class="conn-pill disconnected" id="ftpStatusPill" title="FTP connection status — click to connect">
+                    <span class="xbox-logo" aria-hidden="true">
+                        <img src="/assets/xbox360.png" alt="Xbox 360" width="20" height="20">
+                    </span>
+                    <span class="conn-label">FTP</span>
+                    <i data-lucide="link" class="conn-link conn-link-on"></i>
+                    <i data-lucide="unlink" class="conn-link conn-link-off"></i>
+                </button>
+                <button class="icon-btn theme-toggle" id="btnThemeToggle" title="Toggle light / dark">
+                    <i data-lucide="moon" class="theme-icon-dark"></i>
+                    <i data-lucide="sun" class="theme-icon-light"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="body-layout">
+            <!-- ░░ SIDEBAR ░░ -->
+            <aside class="sidebar">
+                <nav class="nav">
+                    <button class="nav-btn active" data-tab="library">
+                        <i data-lucide="layout-grid"></i><span>Library</span>
+                    </button>
+                    <button class="nav-btn" data-tab="studio">
+                        <i data-lucide="palette"></i><span>Editor</span>
+                    </button>
+                    <button class="nav-btn" data-tab="missing">
+                        <i data-lucide="layers"></i><span>Coverage</span>
+                        <span class="nav-badge" id="navMissingBadge" hidden></span>
+                    </button>
+                    <button class="nav-btn" data-tab="search">
+                        <i data-lucide="globe"></i><span>Online Search</span>
+                    </button>
+                    <button class="nav-btn" data-tab="ftp">
+                        <i data-lucide="radio-tower"></i><span>Console</span>
+                        <span class="nav-badge" id="navPendingBadge" hidden></span>
+                    </button>
+                </nav>
+                <div class="sidebar-foot">
+                    <a href="https://github.com/pekempy/ABAM" target="_blank" rel="noreferrer">
+                        <i data-lucide="github"></i> pekempy/ABAM
+                    </a>
+                </div>
+            </aside>
+
+            <!-- ░░ CONTENT ░░ -->
+            <main class="content">
+
+                <!-- ═══ LIBRARY ═══ -->
+                <section class="tab-page active" id="tab-library">
+                    <div class="page-head">
+                        <div class="page-head-text">
+                            <h2>Game Library</h2>
+                            <p class="subtitle">Browse installed Xbox 360 games from Content.db or a local file.</p>
+                        </div>
+                        <div class="action-row">
+                            <label class="btn btn-ghost" for="fileDbUpload">
+                                <i data-lucide="file-up"></i> Load .db File
+                            </label>
+                            <input type="file" id="fileDbUpload" accept=".db,.sqlite" hidden>
+                            <button class="btn btn-ghost btn-progress" id="btnDownloadAllMissingAssets">
+                                <span class="btn-content">
+                                    <span class="btn-main-label"><i data-lucide="cloud-download"></i> Download Missing</span>
+                                    <span class="btn-subtext" id="btnDownloadSubtext"></span>
+                                </span>
+                            </button>
+                            <button class="btn btn-primary" id="btnFetchXboxDb">
+                                <i data-lucide="download-cloud"></i> Fetch from Console
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="librarySearchInput" placeholder="Search by title or TitleID…">
+                        </div>
+                        <div class="count-chip" id="libraryStatsCount">0 games</div>
+                    </div>
+
+                    <div class="games-grid" id="gamesGrid">
+                        <div class="empty-state">
+                            <i data-lucide="box"></i>
+                            <h3>No games loaded yet</h3>
+                            <p>Fetch <code>Content.db</code> from your console, or load a database file manually.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ═══ EDITOR ═══ -->
+                <section class="tab-page" id="tab-studio">
+                    <div class="page-head">
+                        <div class="page-head-text">
+                            <h2>Asset Editor</h2>
+                            <p class="subtitle">Editing <strong id="studioGameTitle">Selected Game</strong></p>
+                        </div>
+                        <div class="action-row">
+                            <span class="badge" id="studioFolderBadge">Folder: 00000000_00000000</span>
+                            <button class="btn btn-ghost" id="btnPullAssetsFromFtp">
+                                <i data-lucide="download-cloud"></i> Pull Assets
+                            </button>
+                            <button class="btn btn-primary" id="btnSyncCurrentToFtp">
+                                <i data-lucide="send"></i> Push Assets
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="subnav">
+                        <button class="sub-tab-btn active" data-subtab="boxart"><i data-lucide="book-image"></i> Boxart</button>
+                        <button class="sub-tab-btn" data-subtab="background"><i data-lucide="image"></i> Background</button>
+                        <button class="sub-tab-btn" data-subtab="iconbanner"><i data-lucide="badge"></i> Icon &amp; Banner</button>
+                        <button class="sub-tab-btn" data-subtab="screenshots"><i data-lucide="images"></i> Screenshots <span class="tab-count" id="screenshotsTabCount">0</span></button>
+                        <button class="sub-tab-btn" data-subtab="details"><i data-lucide="file-text"></i> Details</button>
+                    </div>
+
+                    <!-- Boxart -->
+                    <div class="sub-page active" id="subtab-boxart">
+                        <div class="editor-split">
+                            <div class="preview-pane">
+                                <div class="cover-guides">
+                                    <span>Back</span><span class="spine">Spine</span><span>Front</span>
+                                </div>
+                                <div class="preview-frame boxart-frame">
+                                    <img id="imgBoxartPreview" alt="Boxart preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='555' height='380'%3E%3Crect width='555' height='380' fill='%231a1d29'/%3E%3Ctext x='50%25' y='50%25' fill='%23606a80' text-anchor='middle' dominant-baseline='middle' font-family='sans-serif'%3ENo Boxart%3C/text%3E%3C/svg%3E">
+                                </div>
+                            </div>
+                            <div class="controls-pane">
+                                <div class="pane-head">
+                                    <h3>Full Spread Cover</h3>
+                                    <span class="badge badge-info">~1.46 : 1</span>
+                                </div>
+                                <p class="hint-text">One image containing Back + Spine + Front. PNG, JPG, WEBP or BMP.</p>
+                                <div class="drop-zone" id="dropZoneBoxart">
+                                    <i data-lucide="upload-cloud"></i>
+                                    <p>Drag &amp; drop cover, or <span>browse</span></p>
+                                    <input type="file" id="fileBoxartInput" accept="image/*" hidden>
+                                </div>
+                                <div class="button-grid">
+                                    <button class="btn btn-ghost" id="btnSearchUnityBoxart"><i data-lucide="search"></i> Search Online</button>
+                                    <button class="btn btn-ghost" id="btnExportBoxartAsset"><i data-lucide="download"></i> Save GC*.asset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Background -->
+                    <div class="sub-page" id="subtab-background">
+                        <div class="editor-split">
+                            <div class="preview-pane">
+                                <div class="preview-frame bg-frame">
+                                    <img id="imgBackgroundPreview" alt="Background preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1280' height='720'%3E%3Crect width='1280' height='720' fill='%231a1d29'/%3E%3Ctext x='50%25' y='50%25' fill='%23606a80' text-anchor='middle' dominant-baseline='middle' font-family='sans-serif' font-size='40'%3ENo Background%3C/text%3E%3C/svg%3E">
+                                </div>
+                            </div>
+                            <div class="controls-pane">
+                                <div class="pane-head"><h3>Background</h3><span class="badge badge-info">1280 × 720</span></div>
+                                <p class="hint-text">Full-screen dashboard background artwork.</p>
+                                <div class="drop-zone" id="dropZoneBackground">
+                                    <i data-lucide="upload-cloud"></i>
+                                    <p>Drag &amp; drop background, or <span>browse</span></p>
+                                    <input type="file" id="fileBackgroundInput" accept="image/*" hidden>
+                                </div>
+                                <div class="button-grid">
+                                    <button class="btn btn-ghost" id="btnSearchOnlineBackground"><i data-lucide="search"></i> Search Online</button>
+                                    <button class="btn btn-ghost" id="btnExportBackgroundAsset"><i data-lucide="download"></i> Save BK*.asset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Icon & Banner -->
+                    <div class="sub-page" id="subtab-iconbanner">
+                        <div class="editor-duo">
+                            <div class="controls-pane">
+                                <div class="pane-head"><h3>Icon</h3><span class="badge badge-info">64 × 64</span></div>
+                                <div class="preview-frame icon-frame">
+                                    <img id="imgIconPreview" alt="Icon preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%231a1d29'/%3E%3C/svg%3E">
+                                </div>
+                                <div class="drop-zone compact" id="dropZoneIcon">
+                                    <i data-lucide="upload"></i><p>Drop 64×64 icon</p>
+                                    <input type="file" id="fileIconInput" accept="image/*" hidden>
+                                </div>
+                                <button class="btn btn-ghost full-width" id="btnSearchOnlineIcon"><i data-lucide="search"></i> Search Icon</button>
+                            </div>
+                            <div class="controls-pane">
+                                <div class="pane-head"><h3>Banner</h3><span class="badge badge-info">420 × 96</span></div>
+                                <div class="preview-frame banner-frame">
+                                    <img id="imgBannerPreview" alt="Banner preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='96'%3E%3Crect width='420' height='96' fill='%231a1d29'/%3E%3C/svg%3E">
+                                </div>
+                                <div class="drop-zone compact" id="dropZoneBanner">
+                                    <i data-lucide="upload"></i><p>Drop 420×96 banner</p>
+                                    <input type="file" id="fileBannerInput" accept="image/*" hidden>
+                                </div>
+                                <div class="button-grid">
+                                    <button class="btn btn-ghost" id="btnSearchOnlineBanner"><i data-lucide="search"></i> Search Banner</button>
+                                    <button class="btn btn-ghost" id="btnExportIconBannerAsset"><i data-lucide="download"></i> Save GL*.asset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Screenshots -->
+                    <div class="sub-page" id="subtab-screenshots">
+                        <div class="pane-head sticky-head">
+                            <h3>Screenshots <span class="hint-text">(up to 20)</span></h3>
+                            <div class="button-group">
+                                <button class="btn btn-ghost" id="btnSearchOnlineScreenshots"><i data-lucide="search"></i> Search Online</button>
+                                <label class="btn btn-primary" for="fileScreenshotInput"><i data-lucide="plus"></i> Add</label>
+                                <input type="file" id="fileScreenshotInput" accept="image/*" hidden>
+                                <button class="btn btn-ghost" id="btnExportScreenshotsAsset"><i data-lucide="download"></i> Save SS*.asset</button>
+                            </div>
+                        </div>
+                        <div class="screenshots-grid" id="screenshotsGrid"></div>
+                    </div>
+
+                    <!-- Details -->
+                    <div class="sub-page" id="subtab-details">
+                        <div class="card">
+                            <div class="pane-head">
+                                <h3>Game Data</h3>
+                                <p class="hint-text">Edit the record, then push the title back to Aurora if needed.</p>
+                            </div>
+                            <form id="studioMetaForm" class="meta-form" onsubmit="return false;">
+                                <div class="form-group">
+                                    <label>Title</label>
+                                    <input type="text" id="studioTitleName" placeholder="Game title">
+                                </div>
+                                <div class="form-group">
+                                    <label>Synopsis / Description</label>
+                                    <textarea id="studioDescription" rows="4" placeholder="Short game synopsis or Aurora description"></textarea>
+                                </div>
+                                <div class="meta-actions">
+                                    <button class="btn btn-ghost" id="btnStudioPullTitle"><i data-lucide="download-cloud"></i> Pull Title</button>
+                                    <button class="btn btn-warning" id="btnStudioPushTitle"><i data-lucide="upload-cloud"></i> Push Title &amp; Synopsis</button>
+                                    <button class="btn btn-primary" id="btnStudioSaveMeta"><i data-lucide="save"></i> Save Data</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ═══ COVERAGE ═══ -->
+                <section class="tab-page" id="tab-missing">
+                    <div class="page-head">
+                        <div class="page-head-text">
+                            <h2>Asset Coverage</h2>
+                            <p class="subtitle">See which artwork is missing across your whole library.</p>
+                        </div>
+                        <div class="action-row">
+                            <button class="btn btn-ghost" id="btnRefreshAssetStatus"><i data-lucide="refresh-cw"></i> Refresh</button>
+                            <div class="seg">
+                                <button class="seg-btn btn-filter-active" id="btnMissingFilterAll" data-filter="all">All</button>
+                                <button class="seg-btn" id="btnMissingFilterIncomplete" data-filter="incomplete"><i data-lucide="alert-triangle"></i> Incomplete</button>
+                            </div>
+                            <button class="btn btn-ghost" id="btnAutoSearchMissingOnline" title="Search Google, DuckDuckGo, Xbox Unity & Steam online for missing artwork"><i data-lucide="sparkles"></i> Auto Search Internet</button>
+                            <button class="btn btn-primary" id="btnMissingDownloadAll" title="Download existing asset files from Xbox console over FTP"><i data-lucide="cloud-download"></i> Pull All From Xbox</button>
+                        </div>
+                    </div>
+
+                    <div class="stat-strip" id="missingSummaryBar">
+                        <div class="stat"><span class="stat-num" id="missingTotal">–</span><span class="stat-label">Total</span></div>
+                        <div class="stat ok"><span class="stat-num" id="missingComplete">–</span><span class="stat-label">Complete</span></div>
+                        <div class="stat warn"><span class="stat-num" id="missingCount">–</span><span class="stat-label">Missing Assets</span></div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="data-table missing-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-cover">Thumb</th>
+                                    <th class="col-title" data-sort="title">Title <i data-lucide="chevrons-up-down"></i></th>
+                                    <th class="col-id" data-sort="id">TitleID <i data-lucide="chevrons-up-down"></i></th>
+                                    <th data-sort="boxart">Boxart <i data-lucide="chevrons-up-down"></i></th>
+                                    <th data-sort="background">Background <i data-lucide="chevrons-up-down"></i></th>
+                                    <th data-sort="icon">Icon <i data-lucide="chevrons-up-down"></i></th>
+                                    <th data-sort="banner">Banner <i data-lucide="chevrons-up-down"></i></th>
+                                    <th data-sort="screenshots">Shots <i data-lucide="chevrons-up-down"></i></th>
+                                    <th class="col-actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="missingTableBody">
+                                <tr><td colspan="9" class="empty-row">Load your library first to see coverage.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ═══ ONLINE SEARCH ═══ -->
+                <section class="tab-page" id="tab-search">
+                    <div class="page-head">
+                        <div class="page-head-text">
+                            <h2>Online Cover Search</h2>
+                            <p class="subtitle">Find high-res boxart on Xbox Unity by title or TitleID.</p>
+                        </div>
+                    </div>
+                    <div class="search-row">
+                        <input type="text" id="onlineSearchQuery" placeholder="Enter TitleID (415608C3) or game title…">
+                        <button class="btn btn-primary" id="btnDoOnlineSearch"><i data-lucide="search"></i> Search</button>
+                    </div>
+                    <div class="source-label"><i data-lucide="globe"></i> Xbox Unity Results</div>
+                    <div class="covers-grid" id="unityResultsGrid">
+                        <div class="empty-state"><p>Search by game title or TitleID to find covers.</p></div>
+                    </div>
+                </section>
+
+                <!-- ═══ CONSOLE ═══ -->
+                <section class="tab-page" id="tab-ftp">
+                    <div class="page-head">
+                        <div class="page-head-text">
+                            <h2>Console Sync</h2>
+                            <p class="subtitle">Connect over FTP using the ftpdll plugin in DashLaunch.</p>
+                        </div>
+                    </div>
+                    <div class="two-col">
+                        <div class="card">
+                            <h3>Connection</h3>
+                            <form id="ftpConfigForm" onsubmit="return false;">
+                                <div class="form-group">
+                                    <label>Xbox IP Address</label>
+                                    <input type="text" id="ftpIp" placeholder="192.168.1.100" required>
+                                </div>
+                                <div class="form-row" hidden>
+                                    <div class="form-group"><label>Username</label><input type="text" id="ftpUser" value="xbox"></div>
+                                    <div class="form-group"><label>Password</label><input type="password" id="ftpPass" value="xbox"></div>
+                                    <div class="form-group"><label>Port</label><input type="number" id="ftpPort" value="7564"></div>
+                                </div>
+                                <div class="button-row">
+                                    <button class="btn btn-ghost" id="btnTestFtp"><i data-lucide="check-circle"></i> Test</button>
+                                    <button class="btn btn-primary" id="btnSaveFtp"><i data-lucide="save"></i> Save</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="card">
+                            <h3>Quick Actions</h3>
+                            <p class="hint-text">Pull the game library or push all cached assets.</p>
+                            <button class="btn btn-primary full-width mb-2" id="btnFtpPullDb"><i data-lucide="database"></i> Download Content.db</button>
+                            <button class="btn btn-ghost full-width" id="btnFtpSyncAllAssets"><i data-lucide="upload-cloud"></i> Push All Assets</button>
+                        </div>
+                    </div>
+                    <div class="card pending-card mt-3" id="pendingCard">
+                        <div class="pane-head">
+                            <h3>Pending Changes <span class="count-pill" id="pendingCountPill">0</span></h3>
+                            <div class="action-row">
+                                <button class="btn btn-ghost btn-sm" id="btnDetectChanges"><i data-lucide="search-check"></i> Detect Changes</button>
+                                <button class="btn btn-ghost btn-sm" id="btnClearPending" hidden><i data-lucide="trash-2"></i> Discard</button>
+                                <button class="btn btn-primary btn-sm" id="btnPushPending" disabled><i data-lucide="upload-cloud"></i> Push Pending</button>
+                            </div>
+                        </div>
+                        <p class="hint-text" id="pendingEmptyHint">No local changes waiting. Assets you upload or apply are tracked here until pushed to the console.</p>
+                        <div class="pending-list" id="pendingList" hidden></div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="pane-head"><h3>Activity Log</h3>
+                            <button class="btn btn-ghost btn-sm" id="btnClearLog"><i data-lucide="eraser"></i> Clear</button>
+                        </div>
+                        <div class="console-log" id="ftpConsoleLog">
+                            <div class="log-line info">[System]: Aurora Better Asset Manager initialized.</div>
+                        </div>
+                    </div>
+
+                    <div class="page-head mt-4">
+                        <div class="page-head-text">
+                            <h2>Settings</h2>
+                            <p class="subtitle">Application preferences.</p>
+                        </div>
+                    </div>
+                    <div class="two-col">
+                        <div class="card">
+                            <h3>Appearance</h3>
+                            <div class="setting-item">
+                                <div><strong>Theme</strong><p class="hint-text">Switch between light and dark.</p></div>
+                                <div class="seg">
+                                    <button class="seg-btn" data-set-theme="light"><i data-lucide="sun"></i> Light</button>
+                                    <button class="seg-btn" data-set-theme="dark"><i data-lucide="moon"></i> Dark</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3>Texture Encoding</h3>
+                            <div class="setting-item">
+                                <div><strong>DXT Image Compression</strong><p class="hint-text">Compress images to DXT for optimal Xbox 360 GPU performance.</p></div>
+                                <label class="switch"><input type="checkbox" id="chkUseCompression" checked><span class="slider"></span></label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ░░ MODAL: QUICK FTP ░░ -->
+    <div class="modal-overlay" id="modalQuickFtp">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Connect to Xbox 360</h3>
+                <button class="btn-close" id="btnCloseModalQuickFtp">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="hint-text mb-2">Enter your Xbox 360 IP address. Requires the ftpdll.xex plugin in DashLaunch.</p>
+                <div class="form-group">
+                    <label>Xbox Console IP</label>
+                    <input type="text" id="quickFtpIp" placeholder="192.168.1.100" required>
+                </div>
+                <div class="form-row" hidden>
+                    <div class="form-group"><label>Username</label><input type="text" id="quickFtpUser" value="xbox"></div>
+                    <div class="form-group"><label>Password</label><input type="password" id="quickFtpPass" value="xbox"></div>
+                    <div class="form-group"><label>Port</label><input type="number" id="quickFtpPort" value="7564"></div>
+                </div>
+                <div id="quickFtpFeedback" class="feedback"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="btnCancelModalQuickFtp">Cancel</button>
+                <button class="btn btn-primary" id="btnConnectModalQuickFtp">Connect &amp; Test</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ░░ MODAL: COVER SEARCH ░░ -->
+    <div class="modal-overlay" id="modalCardCoverSearch">
+        <div class="modal-card modal-large">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modalCoverSearchTitle">Search Cover Art</h3>
+                    <p class="hint-text" id="modalCoverSearchSubtitle">Searching online sources…</p>
+                </div>
+                <button class="btn-close" id="btnCloseModalCoverSearch">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="search-row mb-2">
+                    <input type="text" id="modalCoverSearchQuery" placeholder="Search by title or TitleID…">
+                    <button class="btn btn-primary" id="btnDoModalCoverSearch"><i data-lucide="search"></i> Search</button>
+                </div>
+                <div class="cat-tabs" id="modalSearchCatTabs">
+                    <button class="cat-btn modal-cat-btn active" data-cat="boxart">Boxart</button>
+                    <button class="cat-btn modal-cat-btn" data-cat="background">Background</button>
+                    <button class="cat-btn modal-cat-btn" data-cat="icon">Icon</button>
+                    <button class="cat-btn modal-cat-btn" data-cat="banner">Banner</button>
+                    <button class="cat-btn modal-cat-btn" data-cat="screenshots">Screenshots</button>
+                </div>
+                <div class="covers-grid modal-covers" id="modalCoverSearchResultsGrid">
+                    <div class="empty-state"><p>Search results will appear here.</p></div>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-split">
+                <div class="search-selection-bar" id="modalSearchSelectionBar" hidden>
+                    <span class="selection-count-pill" id="modalSelectedCount">0 selected</span>
+                    <button class="btn btn-ghost btn-xs" id="btnSelectAllScreenshots"><i data-lucide="check-square"></i> Select All</button>
+                    <button class="btn btn-ghost btn-xs" id="btnDeselectAllScreenshots"><i data-lucide="square"></i> Deselect All</button>
+                    <button class="btn btn-primary btn-sm" id="btnApplySelectedScreenshots" disabled><i data-lucide="download-cloud"></i> Apply Selected (<span id="modalApplyCount">0</span>)</button>
+                </div>
+                <button class="btn btn-ghost" id="btnCancelModalCoverSearch">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ░░ LIGHTBOX ░░ -->
+    <div class="lightbox-overlay" id="imgLightbox">
+        <div class="lightbox-toolbar">
+            <span class="lightbox-title" id="lightboxTitle"></span>
+            <div class="lightbox-controls">
+                <button class="lightbox-btn lightbox-replace" id="lightboxReplace" title="Search for a replacement" hidden><i data-lucide="image-plus"></i> Replace</button>
+                <button class="lightbox-btn" id="lightboxZoomIn" title="Zoom in">+</button>
+                <span class="lightbox-zoom-level" id="lightboxZoomLevel">100%</span>
+                <button class="lightbox-btn" id="lightboxZoomOut" title="Zoom out">−</button>
+                <button class="lightbox-btn" id="lightboxReset" title="Reset">⊡</button>
+                <button class="lightbox-btn lightbox-close" id="lightboxClose" title="Close">✕</button>
+            </div>
+        </div>
+        <div class="lightbox-stage" id="lightboxStage">
+            <img class="lightbox-img" id="lightboxImg" src="" alt="">
+        </div>
+        <div class="lightbox-hint">Scroll to zoom · Drag to pan · Click outside to close</div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

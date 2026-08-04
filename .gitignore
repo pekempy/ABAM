@@ -1,0 +1,5 @@
+__pycache__/
+aurora_engine/__pycache__/
+aurora_engine/integrations/__pycache__/
+tests/__pycache__/
+.venv/
